@@ -1,0 +1,23 @@
+﻿{
+  "name" : "豆瓣新版广播折叠补完",
+  "version" : "0.1",
+  "description" : "可以折叠某用户的大量刷屏行为",
+  "browser_action": {
+      "default_icon": "doubanicon-24.png",
+      "default_title": "可以折叠某用户的大量刷屏行为"
+  },
+  "content_scripts" : [
+    {
+      "matches" : [
+        "http://www.douban.com/*",
+        "http://api.douban.com/*"
+      ],
+      "js" : ["jquery-1.7.2.min.js","contentscript.js"],
+      "run_at" : "document_end",
+      "all_frames" : false
+    }
+  ],
+    "permissions": [
+        "tabs",	"http://www.douban.com/*","http://api.douban.com/people/*"
+    ]
+}
