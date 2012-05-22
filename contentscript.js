@@ -12,20 +12,11 @@
 		if (!firstRun) {
 		//是第一次，则设置标记,初始化一个空数组，并设置给localStorage
   		localStorage['douban_first'] = 'true';
-  		var empty_array=new Array();
-  		localStorage.setItem('douban_banlist', JSON.stringify(empty_array));
 		}
-	var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",1013:"推荐小组话题",1018:"我说",1015:"推荐/新日记",1022:"推荐网址",1012:"推荐书评",1002:"看过电影",3049:"读书笔记",1011:"活动兴趣",3065:"东西",1001:"想读/读过",1003:"想听/听过"};
+var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",1013:"推荐小组话题",1018:"我说",1015:"推荐/新日记",1022:"推荐网址",1012:"推荐书评",1002:"看过电影",3049:"读书笔记",1011:"活动兴趣",3065:"东西",1001:"想读/读过",1003:"想听/听过"};
 //====================================================================
 //如果是在广播界面
 	if(ifupdate_url){
-		//console.log("我正在处理广播页面");
-		//console.log('retrievedObject: ', banlist);
-		var retrievedObject = localStorage.getItem('douban_banlist');
-		var banlist=JSON.parse(retrievedObject);
-
-
-
 	//加入过滤器标示并建立好对象	
 	var doumail=$("a[href*='http://www.douban.com/doumail/']");
 	doumail.after("<a id='douban-filter-btn' href='#'>过滤名单</a>");
@@ -88,34 +79,37 @@
 	);
 
 
-	//初始化的一些代码
-	overlay_background.hide();
+//初始化的一些代码
+overlay_background.hide();
 
-var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西"}
+var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西",1025:"推荐相片"}
 var debug=2;
 $("div.status-item").each(function(){
 	var myself=$(this);
 	//优先判断是否为值得存取的类型
 	//【存入数据库】类型
 	var data_kind=myself.attr("data-object-kind");
-	if(need_save_kind.hasOwnProperty(data_kind)){
-		//打印人性化的提示信息
+	//【存入数据库】数据行为
+	var data_action=myself.attr("data-action");
+		if(debug==1){console.log("Action:"+data_action);}
+//============================================
+	if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0")){
+	//打印人性化的提示信息
 	var action=datatypehash[data_kind]==undefined?data_kind:datatypehash[data_kind];
 		if(debug==1){console.log("Kind:"+action);}			
 		
 	//【数据库KEY】SID
 	var data_sid=myself.attr("data-sid");
 		if(debug==1){console.log("ID:"+data_sid);}
-	//【存入数据库】数据行为
-	data_action=myself.attr("data-action");
-		if(debug==1){console.log("Action:"+data_action);}
-
 	//用户地址
 	var user_url=myself.find("div.bd p.text a:first").attr("href");
-		if(debug==1){console.log("user_url:"+user_url);}
+		if(debug==1){console.log("user_url:"+user_url);}		
 	//用户的昵称
 	var user_name=myself.find("div.bd p.text a:first").html();
 		if(debug==1){console.log("user_name:"+user_name);}
+	//用户的发言
+	var user_quote=myself.find("div.bd blockquote p").html();
+		if(debug==1){console.log("user_quote:"+user_quote);}
 	//【存入数据库】用户的唯一ID
 	var user_uid=user_url.slice(29,-1);
 		if(debug==1){console.log("user_uid:"+user_uid);}
@@ -129,48 +123,77 @@ $("div.status-item").each(function(){
 	var time=myself.find("div.actions span.created_at").attr("title");
 		if(debug==1){console.log("Time:"+time);}
 	//生成一个全局对象ID的URL并存入数据库
-	var uid_url=user_url+"status"+data_sid;
+	var uid_url=user_url+"status/"+data_sid;
 	//建立新的ITME对象，暂时只记录这一条的UID以及时间还有
 	var newitem={};
 	newitem.user_uid=user_uid;
 	newitem.time=time;
 	newitem.user_name=user_name;	
 	newitem.uid_url=uid_url;
+	newitem.data_sid=data_sid;
+	newitem.user_quote=user_quote;
 	//判断是否有KEY存在？如果存在，则取出，加入最新的data，然后保存
 	if(localStorage.hasOwnProperty(data_object)){
 		var retrievedObject = localStorage.getItem(data_object);
 		var status=JSON.parse(retrievedObject);
-		//这里应该剔除同一用户的行为
+		//这里应该剔除同一用户的同一全局行为
 		var ifexist=true;		
 		jQuery.each(status,function(index, onestatu){
-			if(onestatu.user_uid==user_uid){
+			if(onestatu.uid_url==uid_url){
 				ifexist=true;
 			}else{
 				ifexist=false;
 			}
-
 		});
-		if(!ifexist){
+		if(ifexist){
+			//DO nothing
+		}else{
 			status.push(newitem);
 			localStorage.setItem(data_object, JSON.stringify(status));
-		}else{
-			//DO nothing
 		}
 		//调试语句，打印修改后的单条status
 		if(debug==2){
-			if(status.length>3){
+			if(status.length>2){
 			console.log("修改后的status,dataobject:"+data_object);				
 				jQuery.each(status,function(index, onestatu){
 					//打印数据描述
 				if(index==0){
-					console.log("人性化数据描述:"+onestatu.data_description);
+					console.log("+人性化数据描述:"+onestatu.data_description);
+					console.log("-共有条目:"+status.length);
 				}else{
-					console.log("用户名:"+onestatu.user_name);
-					console.log("全局链接:"+onestatu.uid_url);					
+					console.log("--用户名:"+"("+index+")"+onestatu.user_name);
+					console.log("--------全局链接:"+onestatu.uid_url);
+					console.log("--------用户发言:"+onestatu.user_quote);						
 				}
 				});
 			}
 		}//debug的东西endif
+//===========================================================		
+//如果值得折叠则，开始实际的折叠逻辑
+if(status.length>2){
+//定位p.text a对象，然后开始修改吧，少年
+var user_actions_obj=myself.find("div.actions");
+user_actions_obj.parent().parent().parent().css("background-color","#E9F4E9");
+//循环开始之前先给楼主自己加上标示
+var user_quote_obj=myself.find("div.bd blockquote");
+user_quote_obj.before("楼主说：");
+jQuery.each(status,function(index, onestatu){
+//不去管第一条META信息，以及本条目本身
+if((index!=0)&&(onestatu.data_sid!=data_sid)){	
+//隐藏不等于本条目data-sid的其余全部
+//user_actions_obj.parent().parent().parent().parent("[data-sid='"+onestatu.data_sid+"']").remove();
+if(onestatu.user_quote!=null){
+//加入用户的发言信息
+var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
+}else{
+var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;<blockquote><p>什么也没说~</p></blockquote>";
+}
+user_actions_obj.before(before_quote);
+}
+});//End of each loop
+
+}
+//=========================================
 	}else{
 		//如果不存在，则建立一个全新的就OK
 		var newarray=new Array();
