@@ -13,6 +13,16 @@
 	var debug=3;
 	var cur_location=location.href;
 	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
+	var people=cur_location.slice(29,-1);
+	//判断是否是第一次运行
+	var banfirstRun = (localStorage['douban_first'] == 'true');
+		if (!banfirstRun) {
+		//是第一次，则设置标记,初始化一个空数组，并设置给localStorage
+  		localStorage['douban_first'] = 'true';
+  		var empty_array=new Array();
+  		localStorage.setItem('douban_banlist', JSON.stringify(empty_array));
+		}
+
 	//判断是否是第一次运行
 	var firstRun = (localStorage['douban_collpse_timeout_mark'] == undefined);
 	if(debug==3){console.log("firstRun："+firstRun);}
@@ -23,7 +33,7 @@
 			//清除所有的缓存？
 			if(debug==3){console.log("运行插件的日期差："+days);}
 			//这是最简单粗暴的清理原则，但说实话，的确太暴力了
-			if(days>7){
+			if(days>3){
 				localStorage.clear();
 				localStorage['douban_collpse_timeout_mark'] = Date.now();
 			}
@@ -37,6 +47,9 @@ var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",10
 //====================================================================
 //如果是在广播界面
 	if(ifupdate_url){
+	var retrievedObject = localStorage.getItem('douban_banlist');
+	var banlist=JSON.parse(retrievedObject);
+
 	//加入过滤器标示并建立好对象	
 	var doumail=$("a[href*='http://www.douban.com/doumail/']");
 	doumail.after("<a id='douban-filter-btn' href='#'>过滤名单</a>");
@@ -101,6 +114,83 @@ var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",10
 
 //初始化的一些代码
 overlay_background.hide();
+	var reshare_btn=$("div.actions a.btn-reshare");
+	reshare_btn.each(function(){
+		var hd=$(this).parent().parent().parent().parent();
+		var user_url=hd.find("div.hd>a").attr("href");
+		if(user_url==undefined){
+
+		}else{
+			$(this).after("&nbsp;&nbsp;<a class='ban_temply_btn'>不再关注该话题</a>");
+		}
+	});
+
+	//在Action条下运行的，暂时关小黑屋功能
+	ban_temply_btn=$("a.ban_temply_btn");
+	ban_temply_btn.click(function(event){
+		var myfather=$(this).parent().parent().parent().parent();
+		//【存入数据库】行为对象，div.bd p.text下的第二个a连接的href一般来说就是行为
+		var data_object=myfather.find("div.bd p.text a:eq(1)").attr("href");
+		if(debug==1){console.log("行为对象:"+data_object);}
+		//【存入数据库】行为对象的描述
+		var data_description=myfather.find("div.bd p.text a:eq(1)").html();
+		if(debug==1){console.log("行为对象:"+data_description);}
+		//调试信息
+
+		var objban_url=new Object();
+			objban_url.url=data_object;
+			objban_url.data_description=data_description;
+
+		var retrievedObject = localStorage.getItem('douban_banlist');
+		var banlist=JSON.parse(retrievedObject);
+			banlist.push(objban_url);
+		if(debug==1){console.log("暂时关小黑屋功能处理过的BANLIST："+banlist);}
+		localStorage.setItem('douban_banlist', JSON.stringify(banlist));
+		window.location.reload();
+	});//End of 暂时关小黑屋功能LocalStorage
+
+//实际的隐藏工作的核心代码
+jQuery.each(banlist,function(index, objban_url){
+//定位到需要屏蔽的推荐地址的URL对象上去
+var ban_url=$("div.status-item div.bd p.text a[href*='"+objban_url.url+"']");
+//console.log(people.parent().parent().parent().html());
+//people.parent().parent().parent().parent(['data-object-kind=1022']).hide();
+ban_url.parent().parent().parent().parent().hide();
+
+//Add hyplink to 过滤器名单
+	var ban_link="<a href='"+objban_url.url+"'>"+objban_url.data_description+"</a>";
+	var data_type="&nbsp;>不再关注<span>"+ban_link+"&nbsp;</span>"
+	var clear_oneperson_ban="<a class='clear_oneperson_ban'>X</a></p>";
+	ban_list_content.prepend(data_type+clear_oneperson_ban);      
+
+});//End of 实际的过滤代码.....就这么一小段而已
+
+	//缓存bancontent-div
+	var clear_oneperson_ban=$(".clear_oneperson_ban");
+	//删除某个用户的BAN行为
+	clear_oneperson_ban.click(function(event){
+		// event.stopPropagation();
+		// var ifexist=false;
+		// var banindex=0;
+		// var get_name=$(this).parent().find('a').html();
+		// console.log($(this).parent().find('a').html());
+		// //取出保存在游览器内的名单,并判断是否存在
+		// 		jQuery.each(banlist,function(index, name){
+		// 			if(get_name==name){
+		// 				ifexist=true;
+		// 				banindex=index;//记录INDEX值
+		// 			};
+		// 		});
+		// console.log("判断是否存在的bool:"+ifexist);
+		// console.log("PEOPLE:"+get_name);
+		// 	if(ifexist==true){
+		// 		banlist.splice(banindex, 1);
+		// 	}
+		// console.log("处理过的BANLIST："+banlist);
+		// localStorage.setItem('douban_banlist', JSON.stringify(banlist));
+		// $(this).parent().html("");
+  // 		window.location.reload();
+	});
 
 var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西",1025:"推荐相片"}
 
