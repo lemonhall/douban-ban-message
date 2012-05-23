@@ -5,14 +5,34 @@
  */
  
 (function(){
+	function dayDiffFromNow(thePast){
+			var millisBetween=Date.now()-thePast;
+			var millisecondsPerDay = 1000 * 60 * 60 * 24;
+			return	Math.floor(millisBetween / millisecondsPerDay);
+	}
+	var debug=3;
 	var cur_location=location.href;
 	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
 	//判断是否是第一次运行
-	var firstRun = (localStorage['douban_first'] == 'true');
+	var firstRun = (localStorage['douban_collpse_timeout_mark'] == undefined);
+	if(debug==3){console.log("firstRun："+firstRun);}
 		if (!firstRun) {
-		//是第一次，则设置标记,初始化一个空数组，并设置给localStorage
-  		localStorage['douban_first'] = 'true';
+			//不是第一次则比较时间
+			var marktime=localStorage['douban_collpse_timeout_mark'];			
+    		var days = dayDiffFromNow(marktime);
+			//清除所有的缓存？
+			if(debug==3){console.log("运行插件的日期差："+days);}
+			//这是最简单粗暴的清理原则，但说实话，的确太暴力了
+			if(days>7){
+				localStorage.clear();
+				localStorage['douban_collpse_timeout_mark'] = Date.now();
+			}
+		}else{
+			//是第一次，则设置标记,记录当前时间
+			localStorage['douban_collpse_timeout_mark'] = Date.now();
 		}
+
+
 var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",1013:"推荐小组话题",1018:"我说",1015:"推荐/新日记",1022:"推荐网址",1012:"推荐书评",1002:"看过电影",3049:"读书笔记",1011:"活动兴趣",3065:"东西",1001:"想读/读过",1003:"想听/听过"};
 //====================================================================
 //如果是在广播界面
@@ -83,7 +103,7 @@ var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",10
 overlay_background.hide();
 
 var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西",1025:"推荐相片"}
-var debug=2;
+
 
 $("div.status-item").each(function(){
 	var myself=$(this);
@@ -146,7 +166,7 @@ $("div.status-item").each(function(){
 				ifexist=true;
 			}
 		});//Endof 剔除同一全局STATUS_URL的循环
-		console.log("最终判断出来的是否存在"+ifexist);
+		if(debug==2){console.log("最终判断出来的是否存在"+ifexist);}
 		if(!ifexist){
 			status.push(newitem);
 			status.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
@@ -183,7 +203,14 @@ jQuery.each(status,function(index, onestatu){
 //不去管第一条META信息，以及本条目本身
 if((index!=0)&&(onestatu.data_sid!=data_sid)){	
 //隐藏不等于本条目data-sid的其余全部
-//user_actions_obj.parent().parent().parent().parent("[data-sid='"+onestatu.data_sid+"']").remove();
+//同一页面的隐藏逻辑仍旧有问题
+//应该是这样，使用行为对象来进行扫描，扫描全部同一行为对象的集合
+//隐藏除了第一个以外的行为对象，比如同一页面上有多个推荐同一话题的
+//则隐藏除了第一个以外的
+//user_actions_obj.parent().parent().parent().parent("[data-sid=='"+onestatu.data_sid+"']").hide();
+//【存入数据库】行为对象，div.bd p.text下的第二个a连接的href一般来说就是行为
+// var data_object=myself.find("div.bd p.text a:eq(1)").attr("href");
+// 	if(debug==1){console.log("行为对象:"+data_object);}
 if(onestatu.user_quote!=null){
 //加入用户的发言信息
 var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"&nbsp;说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
@@ -211,6 +238,7 @@ user_actions_obj.before(before_quote);
 		//第一次扫描得到该条目时，ARRAY的第一条为该条目的详细信息
 		var dataitem={};
 		dataitem.data_description=data_description;
+		dataitem.data_timestamp=Date.now();
 		newarray.push(dataitem);
 		newarray.push(newitem);
 		localStorage.setItem(data_object, JSON.stringify(newarray));
