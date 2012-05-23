@@ -84,6 +84,7 @@ overlay_background.hide();
 
 var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西",1025:"推荐相片"}
 var debug=2;
+
 $("div.status-item").each(function(){
 	var myself=$(this);
 	//优先判断是否为值得存取的类型
@@ -93,7 +94,7 @@ $("div.status-item").each(function(){
 	var data_action=myself.attr("data-action");
 		if(debug==1){console.log("Action:"+data_action);}
 //============================================
-	if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0")){
+	if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0"||data_action=="1")){
 	//打印人性化的提示信息
 	var action=datatypehash[data_kind]==undefined?data_kind:datatypehash[data_kind];
 		if(debug==1){console.log("Kind:"+action);}			
@@ -134,21 +135,22 @@ $("div.status-item").each(function(){
 	newitem.user_quote=user_quote;
 	//判断是否有KEY存在？如果存在，则取出，加入最新的data，然后保存
 	if(localStorage.hasOwnProperty(data_object)){
+		//循环外取出对象，到内存(这里应该还有优化的余地)
 		var retrievedObject = localStorage.getItem(data_object);
 		var status=JSON.parse(retrievedObject);
+
+		var ifexist=false;
 		//这里应该剔除同一用户的同一全局行为
-		var ifexist=true;		
-		jQuery.each(status,function(index, onestatu){
+		jQuery.each(status,function(index, onestatu){		
 			if(onestatu.uid_url==uid_url){
 				ifexist=true;
-			}else{
-				ifexist=false;
 			}
-		});
-		if(ifexist){
-			//DO nothing
-		}else{
+		});//Endof 剔除同一全局STATUS_URL的循环
+		console.log("最终判断出来的是否存在"+ifexist);
+		if(!ifexist){
 			status.push(newitem);
+			status.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
+			//可以在这里加入时间限制，比如超过3天的东西，就不予继续缓存在本地
 			localStorage.setItem(data_object, JSON.stringify(status));
 		}
 		//调试语句，打印修改后的单条status
@@ -184,9 +186,9 @@ if((index!=0)&&(onestatu.data_sid!=data_sid)){
 //user_actions_obj.parent().parent().parent().parent("[data-sid='"+onestatu.data_sid+"']").remove();
 if(onestatu.user_quote!=null){
 //加入用户的发言信息
-var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
+var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"&nbsp;说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
 }else{
-var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;<blockquote><p>什么也没说~</p></blockquote>";
+var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"<blockquote><p>什么也没说~</p></blockquote>";
 }
 user_actions_obj.before(before_quote);
 }
@@ -196,6 +198,15 @@ user_actions_obj.before(before_quote);
 //=========================================
 	}else{
 		//如果不存在，则建立一个全新的就OK
+		if(debug==1){
+			console.log("=======First Blood!!=========");
+			console.log("UserID:"+newitem.user_uid);
+			console.log("Time:"+newitem.time);
+			console.log("Name:"+newitem.user_name);
+			console.log("UID_URL:"+newitem.uid_url);
+			console.log("SID:"+newitem.data_sid);
+			console.log("Quote:"+newitem.user_quote);
+		}
 		var newarray=new Array();
 		//第一次扫描得到该条目时，ARRAY的第一条为该条目的详细信息
 		var dataitem={};
