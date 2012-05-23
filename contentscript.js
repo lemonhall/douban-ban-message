@@ -10,7 +10,7 @@
 			var millisecondsPerDay = 1000 * 60 * 60 * 24;
 			return	Math.floor(millisBetween / millisecondsPerDay);
 	}
-	var debug=3;
+	var debug=4;
 	var cur_location=location.href;
 	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
 	var people=cur_location.slice(29,-1);
@@ -159,37 +159,41 @@ ban_url.parent().parent().parent().parent().hide();
 
 //Add hyplink to 过滤器名单
 	var ban_link="<a href='"+objban_url.url+"'>"+objban_url.data_description+"</a>";
-	var data_type="&nbsp;>不再关注<span>"+ban_link+"&nbsp;</span>"
-	var clear_oneperson_ban="<a class='clear_oneperson_ban'>X</a></p>";
-	ban_list_content.prepend(data_type+clear_oneperson_ban);      
+	var data_type="<p>&nbsp;>不再关注<span>"+ban_link+"&nbsp;</span>"
+	var clear_onetopic_ban="<a class='clear_onetopic_ban'>X</a></p>";
+	ban_list_content.prepend(data_type+clear_onetopic_ban);      
 
 });//End of 实际的过滤代码.....就这么一小段而已
 
 	//缓存bancontent-div
-	var clear_oneperson_ban=$(".clear_oneperson_ban");
-	//删除某个用户的BAN行为
-	clear_oneperson_ban.click(function(event){
-		// event.stopPropagation();
-		// var ifexist=false;
-		// var banindex=0;
-		// var get_name=$(this).parent().find('a').html();
-		// console.log($(this).parent().find('a').html());
-		// //取出保存在游览器内的名单,并判断是否存在
-		// 		jQuery.each(banlist,function(index, name){
-		// 			if(get_name==name){
-		// 				ifexist=true;
-		// 				banindex=index;//记录INDEX值
-		// 			};
-		// 		});
-		// console.log("判断是否存在的bool:"+ifexist);
-		// console.log("PEOPLE:"+get_name);
-		// 	if(ifexist==true){
-		// 		banlist.splice(banindex, 1);
-		// 	}
-		// console.log("处理过的BANLIST："+banlist);
-		// localStorage.setItem('douban_banlist', JSON.stringify(banlist));
-		// $(this).parent().html("");
-  // 		window.location.reload();
+	var clear_onetopic_ban=$(".clear_onetopic_ban");
+	//删除某个话题的BAN行为
+	clear_onetopic_ban.click(function(event){
+		event.stopPropagation();
+		var ifexist=false;
+		var banindex=0;
+		var get_url=$(this).parent().find('a').attr("href");
+		if(debug==4){
+			console.log(get_url);
+		}
+		//取出保存在游览器内的名单,并判断是否存在
+				jQuery.each(banlist,function(index, objban_url){
+					if(get_url==objban_url.url){
+						ifexist=true;
+						banindex=index;//记录INDEX值
+					};
+				});
+		if(debug==4){
+			console.log("判断是否存在的bool:"+ifexist);
+			console.log("URL:"+get_url);
+		}
+			if(ifexist==true){
+				banlist.splice(banindex, 1);
+			}
+		if(debug==4){console.log("处理过的BANLIST："+banlist);}
+		localStorage.setItem('douban_banlist', JSON.stringify(banlist));
+		$(this).parent().html("");
+  		window.location.reload();
 	});
 
 var need_save_kind={1026:"相册推荐",1013:"推荐小组话题",1015:"推荐/新日记",1012:"推荐书评",3065:"东西",1025:"推荐相片"}
