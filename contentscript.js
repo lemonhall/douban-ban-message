@@ -10,6 +10,16 @@
 			var millisecondsPerDay = 1000 * 60 * 60 * 24;
 			return	Math.floor(millisBetween / millisecondsPerDay);
 	}
+
+	function getComments(sid){
+		var comments="I am space~~";
+	$.getJSON("http://www.douban.com/j/status/comments?sid="+sid,
+            function (data) {
+                //console.log(data.comments);
+                comments=data.comments;
+            });//End of Get json
+		return comments;
+	}//End of Get Comments
 	var debug=4;
 	var cur_location=location.href;
 	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
@@ -311,8 +321,29 @@ var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp
 }else{
 var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"<blockquote><p>什么也没说~</p></blockquote>";
 }
-user_actions_obj.before(before_quote);
+//因为这里是异步的AJAX调用，所以不可能有任何的返回值，只是空而已
+var comments="";
+
+function successFunc(){
+    console.log("success!");
+    console.log("Comments:"+comments);
+    user_actions_obj.before(before_quote+comments);
+}    
+ 
+function failureFunc(){
+    console.log("failure!");
+    user_actions_obj.before(before_quote);
 }
+
+$.when(
+    $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
+            function (data) {
+                //console.log(data.comments);
+                comments=data.comments;
+            })//End of Get json
+).then( successFunc, failureFunc );
+
+}//end of if (index!=0)&&(onestatu.data_sid!=data_sid)
 });//End of each loop
 
 }
