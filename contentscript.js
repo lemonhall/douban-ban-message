@@ -9,21 +9,7 @@
 			var millisBetween=Date.now()-thePast;
 			var millisecondsPerDay = 1000 * 60 * 60 * 24;
 			return	Math.floor(millisBetween / millisecondsPerDay);
-	}
-
-	function getComments(sid){
-		var comments="I am space~~";
-	$.getJSON("http://www.douban.com/j/status/comments?sid="+sid,
-            function (data) {
-                //console.log(data.comments);
-                comments=data.comments;
-            });//End of Get json
-		return comments;
-	}//End of Get Comments
-	var debug=4;
-	var cur_location=location.href;
-	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
-	var people=cur_location.slice(29,-1);
+	}	
 	//判断是否是第一次运行
 	var banfirstRun = (localStorage['douban_first'] == 'true');
 		if (!banfirstRun) {
@@ -54,6 +40,10 @@
 
 
 var datatypehash={3043:"推荐单曲",1025:"上传照片",1026:"相册推荐",1013:"推荐小组话题",1018:"我说",1015:"推荐/新日记",1022:"推荐网址",1012:"推荐书评",1002:"看过电影",3049:"读书笔记",1011:"活动兴趣",3065:"东西",1001:"想读/读过",1003:"想听/听过"};
+var debug=4;
+	var cur_location=location.href;
+	var ifupdate_url=cur_location.slice(0,29)=="http://www.douban.com/update/";
+	var people=cur_location.slice(29,-1);
 //====================================================================
 //如果是在广播界面
 	if(ifupdate_url){
@@ -294,9 +284,84 @@ $("div.status-item").each(function(){
 				});
 			}
 		}//debug的东西endif
+//=====================================
+//如果大于2则打上颜色标记，并加入展开逻辑的代码，在按钮上附加上数据
+//，即所有的status的data_sid，数组，然后处理部分则更简单，读取这个数组，并展开
+//这样会减少不必要的AJAX读取
+if(status.length>2){
+	//定位p.text a对象，然后开始修改吧，少年
+	var user_actions_obj=myself.find("div.actions");
+	user_actions_obj.parent().parent().parent().css("background-color","#E9F4E9");
+	//加入按钮并绑定数据
+	user_actions_obj.find(".ban_temply_btn").after("&nbsp;&nbsp;<a class='folder_topic'>展开该话题?"+"/共有"+(status.length-1).toString()+"人关注</a>");
+	var folder=user_actions_obj.find(".folder_topic");
+	//console.log(folder);
+	//将数据包序列化后存储在相应的DOM元素上，这简直就是OO啊
+	var datas=JSON.stringify(status);
+	folder.attr("data-status",datas);
+	//console.log(datas);
+	//处理站展开的函数
+	function expand_topic(){
+		//alert($(this).attr("data-status"));
+		var status=JSON.parse($(this).attr("data-status"));
+		//console.log(status);
+		var u_a_o=$(this).parent();
+		//console.log(u_a_o);
+		var user_quote_obj=u_a_o.find("div.bd blockquote");
+			user_quote_obj.before("楼主说：");
+		jQuery.each(status,function(index, onestatu){
+		//不去管第一条META信息，以及本条目本身
+		if((index!=0)&&(onestatu.data_sid!=data_sid)){	
+			if(onestatu.user_quote!=null){
+			//加入用户的发言信息
+			var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"&nbsp;说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
+			}else{
+			var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"<blockquote><p>什么也没说~</p></blockquote>";
+			}
+			//因为这里是异步的AJAX调用，所以不可能有任何的返回值，只是空而已
+			var comments="";
+
+			function getLatestComments() {
+				return $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
+				function (data) {
+				    //console.log(data.comments);
+				    comments=data.comments;
+				    	var o=$(comments);
+				    	//split comments into a array of <p> element
+				    	o.find("em").wrap("<blockquote/>");
+				    	//bulect join these elements into a single jq object then append it
+				    	var span=$("<span></span>").append(o);
+				    	//console.log(span);
+				    	u_a_o.before(before_quote+span.html());
+				    //user_actions_obj.before($(comments).find("p").wrap("<blockquote/>"));
+				});//End of Get json
+			}
+
+			function successFunc(){
+			    //console.log("success!");
+			    //console.log("Comments:"+comments);    
+			    }    
+			 
+			function failureFunc(){
+			    //console.log("failure!");
+			    u_a_o.before(before_quote);
+			}
+
+			$.when(
+			    getLatestComments()
+			).then( successFunc, failureFunc );
+		}//End of 过滤META信息的if
+		});//End of Each 
+		
+	}//End of Click function
+
+
+	//绑定好对应的处理函数
+	folder.bind('click', expand_topic);
+}
 //===========================================================		
 //如果值得折叠则，开始实际的折叠逻辑
-if(status.length>2){
+if(status.length>100){
 //定位p.text a对象，然后开始修改吧，少年
 var user_actions_obj=myself.find("div.actions");
 user_actions_obj.parent().parent().parent().css("background-color","#E9F4E9");
@@ -305,7 +370,7 @@ var user_quote_obj=myself.find("div.bd blockquote");
 user_quote_obj.before("楼主说：");
 jQuery.each(status,function(index, onestatu){
 //不去管第一条META信息，以及本条目本身
-if((index!=0)&&(onestatu.data_sid!=data_sid)){	
+if((index!=0)){	
 //隐藏不等于本条目data-sid的其余全部
 //同一页面的隐藏逻辑仍旧有问题
 //应该是这样，使用行为对象来进行扫描，扫描全部同一行为对象的集合
