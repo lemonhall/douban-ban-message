@@ -324,28 +324,39 @@ var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp
 //因为这里是异步的AJAX调用，所以不可能有任何的返回值，只是空而已
 var comments="";
 
+function getLatestComments() {
+	return $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
+	function (data) {
+	    //console.log(data.comments);
+	    comments=data.comments;
+	    	var o=$(comments);
+	    	//split comments into a array of <p> element
+	    	o.find("em").wrap("<blockquote/>");
+	    	//bulect join these elements into a single jq object then append it
+	    	var span=$("<span></span>").append(o);
+	    	//console.log(span);
+	    user_actions_obj.before(before_quote+span.html());
+	    //user_actions_obj.before($(comments).find("p").wrap("<blockquote/>"));
+	});//End of Get json
+}
+
 function successFunc(){
-    console.log("success!");
-    console.log("Comments:"+comments);
-    user_actions_obj.before(before_quote+comments);
-}    
+    //console.log("success!");
+    //console.log("Comments:"+comments);    
+    }    
  
 function failureFunc(){
-    console.log("failure!");
+    //console.log("failure!");
     user_actions_obj.before(before_quote);
 }
 
 $.when(
-    $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
-            function (data) {
-                //console.log(data.comments);
-                comments=data.comments;
-            })//End of Get json
+    getLatestComments()
 ).then( successFunc, failureFunc );
 
 }//end of if (index!=0)&&(onestatu.data_sid!=data_sid)
 });//End of each loop
-
+//$(".lemon_comments p").wrap("<blockquote />");
 }
 //=========================================
 	}else{
