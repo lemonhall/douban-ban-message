@@ -286,7 +286,7 @@ if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0"||data_action=="
 				ifexist=true;
 			}
 		});//Endof 剔除同一全局STATUS_URL的循环
-		if((!ifexist)&&(newitem.uid_url!=undefined)){
+		if((!ifexist)&&(newitem.user_name!=undefined)){
 			status.push(newitem);
 			status.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
 			//可以在这里加入时间限制，比如超过3天的东西，就不予继续缓存在本地
