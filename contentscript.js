@@ -351,8 +351,10 @@ if(status.length>2){
 			    getLatestComments()
 			).then( successFunc, failureFunc );
 		}//End of 过滤META信息的if
-		});//End of Each 
-		
+		});//End of Each
+
+		//一旦展开完毕，就隐藏按钮，简化逻辑 
+		$(this).hide();
 	}//End of Click function
 
 
