@@ -1,5 +1,6 @@
 ﻿{
   "name" : "豆瓣新版广播折叠补完",
+  "manifest_version": 2,
   "version" : "0.2",
   "description" : "可以折叠某用户的大量刷屏行为",
   "browser_action": {

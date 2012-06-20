@@ -5,6 +5,18 @@
  */
  
 (function(){
+	var urlParams = {};
+	(function () {
+	    var match,
+	        pl     = /\+/g,  // Regex for replacing addition symbol with a space
+	        search = /([^&=]+)=?([^&]*)/g,
+	        decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+	        query  = window.location.search.substring(1);
+
+	    while (match = search.exec(query))
+	       urlParams[decode(match[1])] = decode(match[2]);
+	})();
+	//console.log(urlParams);
 	function dayDiffFromNow(thePast){
 			var millisBetween=Date.now()-thePast;
 			var millisecondsPerDay = 1000 * 60 * 60 * 24;
@@ -53,6 +65,20 @@ var debug=4;
 	//加入过滤器标示并建立好对象	
 	var doumail=$("a[href*='http://www.douban.com/doumail/']");
 	doumail.after("<a id='douban-filter-btn' href='#'>过滤名单</a>");
+//自动翻页功能相关代码段==================================================
+	doumail.after("<a id='auto-scan-btn'>自动翻页</a>");
+	function rollpage(){		
+			var number = urlParams["p"]===undefined?1:parseInt(urlParams["p"], 10);
+			//console.log(number);			
+			if(number!=100){
+				location.href="http://www.douban.com/update/?p="+(number+1)+"&auto_roll=1";
+			}	
+	}
+	if(urlParams["auto_roll"]==="1"){setTimeout(rollpage,2000);}	
+	$("#auto-scan-btn").bind("click",function(){			
+			rollpage();
+		});
+//=========================================================================
 
 	var overlay_html="<div id='lemon-overlay' style='position:absolute;left: 0px;top: 0px;width:100%;height:100%;z-index: 1000;'>";
 	var overlaydiv_html="<div id='lemon-overlaydiv' style='width:250px;height:400px;margin: 30px 0px 0px 70%;background-color: #fff;border:1px solid #000;padding:15px;overflow-y:scroll;'>";
@@ -208,11 +234,10 @@ $("div.status-item").each(function(){
 	var data_action=myself.attr("data-action");
 		if(debug==1){console.log("Action:"+data_action);}
 //============================================
-	if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0"||data_action=="1")){
+if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0"||data_action=="1")){
 	//打印人性化的提示信息
-	var action=datatypehash[data_kind]==undefined?data_kind:datatypehash[data_kind];
-		if(debug==1){console.log("Kind:"+action);}			
-		
+	var action=datatypehash[data_kind]===undefined?data_kind:datatypehash[data_kind];
+		if(debug==1){console.log("Kind:"+action);}		
 	//【数据库KEY】SID
 	var data_sid=myself.attr("data-sid");
 		if(debug==1){console.log("ID:"+data_sid);}
@@ -241,18 +266,19 @@ $("div.status-item").each(function(){
 	var uid_url=user_url+"status/"+data_sid;
 	//建立新的ITME对象，暂时只记录这一条的UID以及时间还有
 	var newitem={};
-	newitem.user_uid=user_uid;
-	newitem.time=time;
-	newitem.user_name=user_name;	
-	newitem.uid_url=uid_url;
-	newitem.data_sid=data_sid;
-	newitem.user_quote=user_quote;
-	//判断是否有KEY存在？如果存在，则取出，加入最新的data，然后保存
+		newitem.user_uid=user_uid;
+		newitem.time=time;
+		newitem.user_name=user_name;	
+		newitem.uid_url=uid_url;
+		newitem.data_sid=data_sid;
+		newitem.user_quote=user_quote;
+	var status=[];
+//=============================================================
+//判断是否有KEY存在？如果存在，则取出，加入最新的data，然后保存
 	if(localStorage.hasOwnProperty(data_object)){
 		//循环外取出对象，到内存(这里应该还有优化的余地)
 		var retrievedObject = localStorage.getItem(data_object);
-		var status=JSON.parse(retrievedObject);
-
+		status=JSON.parse(retrievedObject);
 		var ifexist=false;
 		//这里应该剔除同一用户的同一全局行为
 		jQuery.each(status,function(index, onestatu){		
@@ -260,31 +286,24 @@ $("div.status-item").each(function(){
 				ifexist=true;
 			}
 		});//Endof 剔除同一全局STATUS_URL的循环
-		if(debug==2){console.log("最终判断出来的是否存在"+ifexist);}
-		if(!ifexist){
+		if((!ifexist)&&(newitem.uid_url!=undefined)){
 			status.push(newitem);
 			status.sort(function(a,b) {return (a.time > b.time) ? 1 : ((b.time > a.time) ? -1 : 0);} );
 			//可以在这里加入时间限制，比如超过3天的东西，就不予继续缓存在本地
 			localStorage.setItem(data_object, JSON.stringify(status));
 		}
-		//调试语句，打印修改后的单条status
-		if(debug==2){
-			if(status.length>2){
-			console.log("修改后的status,dataobject:"+data_object);				
-				jQuery.each(status,function(index, onestatu){
-					//打印数据描述
-				if(index==0){
-					console.log("+人性化数据描述:"+onestatu.data_description);
-					console.log("-共有条目:"+status.length);
-				}else{
-					console.log("--用户名:"+"("+index+")"+onestatu.user_name);
-					console.log("--------全局链接:"+onestatu.uid_url);
-					console.log("--------用户发言:"+onestatu.user_quote);						
-				}
-				});
-			}
-		}//debug的东西endif
-//=====================================
+		//here we filter some undefined url issues...
+		}else if((data_object!=undefined)){
+			var newarray=new Array();
+			//第一次扫描得到该条目时，ARRAY的第一条为该条目的详细信息
+			var dataitem={};
+				dataitem.data_description=data_description;
+					dataitem.data_timestamp=Date.now();
+						newarray.push(dataitem);
+						newarray.push(newitem);
+			localStorage.setItem(data_object, JSON.stringify(newarray));
+		}//判断key/value存储当中dataobject_url是否计入存储的endif
+//==============================================================================
 //如果大于2则打上颜色标记，并加入展开逻辑的代码，在按钮上附加上数据
 //，即所有的status的data_sid，数组，然后处理部分则更简单，读取这个数组，并展开
 //这样会减少不必要的AJAX读取
@@ -295,18 +314,13 @@ if(status.length>2){
 	//加入按钮并绑定数据
 	user_actions_obj.find(".ban_temply_btn").after("&nbsp;&nbsp;<a class='folder_topic'>展开该话题?"+"/共有"+(status.length-1).toString()+"人关注</a>");
 	var folder=user_actions_obj.find(".folder_topic");
-	//console.log(folder);
 	//将数据包序列化后存储在相应的DOM元素上，这简直就是OO啊
 	var datas=JSON.stringify(status);
 	folder.attr("data-status",datas);
-	//console.log(datas);
 	//处理站展开的函数
 	function expand_topic(){
-		//alert($(this).attr("data-status"));
 		var status=JSON.parse($(this).attr("data-status"));
-		//console.log(status);
 		var u_a_o=$(this).parent();
-		//console.log(u_a_o);
 		var user_quote_obj=u_a_o.find("div.bd blockquote");
 			user_quote_obj.before("楼主说：");
 		jQuery.each(status,function(index, onestatu){
@@ -320,7 +334,6 @@ if(status.length>2){
 			}
 			//因为这里是异步的AJAX调用，所以不可能有任何的返回值，只是空而已
 			var comments="";
-
 			function getLatestComments() {
 				return $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
 				function (data) {
@@ -336,121 +349,29 @@ if(status.length>2){
 				    //user_actions_obj.before($(comments).find("p").wrap("<blockquote/>"));
 				});//End of Get json
 			}
-
 			function successFunc(){
-			    //console.log("success!");
-			    //console.log("Comments:"+comments);    
-			    }    
-			 
+				//console.log("success!");   
+			    }			 
 			function failureFunc(){
 			    //console.log("failure!");
 			    u_a_o.before(before_quote);
 			}
-
 			$.when(
 			    getLatestComments()
 			).then( successFunc, failureFunc );
 		}//End of 过滤META信息的if
 		});//End of Each
-
 		//一旦展开完毕，就隐藏按钮，简化逻辑 
 		$(this).hide();
-	}//End of Click function
-
-
+	}//End of expand_topic Click function
 	//绑定好对应的处理函数
 	folder.bind('click', expand_topic);
 }
-//===========================================================		
-//如果值得折叠则，开始实际的折叠逻辑
-if(status.length>100){
-//定位p.text a对象，然后开始修改吧，少年
-var user_actions_obj=myself.find("div.actions");
-user_actions_obj.parent().parent().parent().css("background-color","#E9F4E9");
-//循环开始之前先给楼主自己加上标示
-var user_quote_obj=myself.find("div.bd blockquote");
-user_quote_obj.before("楼主说：");
-jQuery.each(status,function(index, onestatu){
-//不去管第一条META信息，以及本条目本身
-if((index!=0)){	
-//隐藏不等于本条目data-sid的其余全部
-//同一页面的隐藏逻辑仍旧有问题
-//应该是这样，使用行为对象来进行扫描，扫描全部同一行为对象的集合
-//隐藏除了第一个以外的行为对象，比如同一页面上有多个推荐同一话题的
-//则隐藏除了第一个以外的
-//user_actions_obj.parent().parent().parent().parent("[data-sid=='"+onestatu.data_sid+"']").hide();
-//【存入数据库】行为对象，div.bd p.text下的第二个a连接的href一般来说就是行为
-// var data_object=myself.find("div.bd p.text a:eq(1)").attr("href");
-// 	if(debug==1){console.log("行为对象:"+data_object);}
-if(onestatu.user_quote!=null){
-//加入用户的发言信息
-var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"&nbsp;说:"+"<blockquote><p>"+onestatu.user_quote+"</p></blockquote>";
-}else{
-var before_quote="<a href='"+onestatu.uid_url+"'>"+onestatu.user_name+"</a>&nbsp;"+onestatu.time+"<blockquote><p>什么也没说~</p></blockquote>";
-}
-//因为这里是异步的AJAX调用，所以不可能有任何的返回值，只是空而已
-var comments="";
-
-function getLatestComments() {
-	return $.getJSON("http://www.douban.com/j/status/comments?sid="+onestatu.data_sid,
-	function (data) {
-	    //console.log(data.comments);
-	    comments=data.comments;
-	    	var o=$(comments);
-	    	//split comments into a array of <p> element
-	    	o.find("em").wrap("<blockquote/>");
-	    	//bulect join these elements into a single jq object then append it
-	    	var span=$("<span></span>").append(o);
-	    	//console.log(span);
-	    user_actions_obj.before(before_quote+span.html());
-	    //user_actions_obj.before($(comments).find("p").wrap("<blockquote/>"));
-	});//End of Get json
-}
-
-function successFunc(){
-    //console.log("success!");
-    //console.log("Comments:"+comments);    
-    }    
- 
-function failureFunc(){
-    //console.log("failure!");
-    user_actions_obj.before(before_quote);
-}
-
-$.when(
-    getLatestComments()
-).then( successFunc, failureFunc );
-
-}//end of if (index!=0)&&(onestatu.data_sid!=data_sid)
-});//End of each loop
-//$(".lemon_comments p").wrap("<blockquote />");
-}
-//=========================================
-	}else{
-		//如果不存在，则建立一个全新的就OK
-		if(debug==1){
-			console.log("=======First Blood!!=========");
-			console.log("UserID:"+newitem.user_uid);
-			console.log("Time:"+newitem.time);
-			console.log("Name:"+newitem.user_name);
-			console.log("UID_URL:"+newitem.uid_url);
-			console.log("SID:"+newitem.data_sid);
-			console.log("Quote:"+newitem.user_quote);
-		}
-		var newarray=new Array();
-		//第一次扫描得到该条目时，ARRAY的第一条为该条目的详细信息
-		var dataitem={};
-		dataitem.data_description=data_description;
-		dataitem.data_timestamp=Date.now();
-		newarray.push(dataitem);
-		newarray.push(newitem);
-		localStorage.setItem(data_object, JSON.stringify(newarray));
-	}//判断key/value存储当中dataobject_url是否计入存储的endif
-	//存入逻辑结束
+//===========================================================
 	}
-});
-	
-		
-	}//End of if update view?
+//if((need_save_kind.hasOwnProperty(data_kind))&&(data_action=="0"||data_action=="1"))
+//End of line 211 if
+});//扫描每个status-item的例程结束		
+}//End of if update view?
  
 } )();
