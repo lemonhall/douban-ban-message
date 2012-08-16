@@ -1,19 +1,18 @@
 ﻿{
-  "name" : "豆瓣新版广播折叠补完",
+  "name" : "豆瓣新版广播增强",
   "manifest_version": 2,
-  "version" : "0.2",
-  "description" : "可以折叠某用户的大量刷屏行为",
+  "version" : "0.3",
+  "description" : "折叠广播、屏蔽特定话题、屏蔽某用户发言、只关注用户的某种行为",
   "browser_action": {
       "default_icon": "doubanicon-24.png",
-      "default_title": "可以折叠某用户的大量刷屏行为"
+      "default_title": "折叠广播、屏蔽特定话题、屏蔽某用户发言、只关注用户的某种行为"
   },
   "content_scripts" : [
     {
       "matches" : [
-        "http://www.douban.com/*",
-        "http://api.douban.com/*"
+        "http://www.douban.com/update/*",
       ],
-      "js" : ["jquery-1.7.2.min.js","contentscript.js"],
+      "js" : ["jquery-1.7.2.min.js", "common.js","menu.js","grouper.js","update.js"],
       "run_at" : "document_end",
       "all_frames" : false
     }
